@@ -8,7 +8,13 @@ import seaborn as sns
 from bs4 import BeautifulSoup
 import csv
 import requests
+import torch
 
+#%% set torch device for macos
+device = torch.device("mps")
+
+#%% set torch device for cuda
+device = torch.device("cuda")
 
 #%% Getting the Info for the df
 url = "https://en.wikipedia.org/wiki/List_of_largest_companies_in_the_United_States_by_revenue"
@@ -61,51 +67,53 @@ df = df.astype(conversion_types)
 df['Employees'] = df['Employees'].str.replace(r'\D', '', regex=True)
 df['Employees'] = df['Employees'].astype('Int64')
 
-#%%
-print(df.dtypes)
+df.dropna(inplace = True)
+
 #%% searching for high population
 #high population is when the employees are above 1 million
 high_pop_df = df[df["Employees"] > 1000000]
+print(high_pop_df)
 
+#%% searching for small top companies
 
-#%% pytorch test
-import math
+low_pop_df = df[df["Employees"] < 50000]
+print(low_pop_df)
 
-dtype = torch.float
-device = torch.device("mps")
+#%% We will try to determine what states have the highest concentration of companies
+print(df["State"].nunique())
 
-# Create random input and output data
-x = torch.linspace(-math.pi, math.pi, 2000, device=device, dtype=dtype)
-y = torch.sin(x)
+state_counts = df.groupby("State")["Name"].count()
+state_counts_sorted = state_counts.sort_values(ascending=False)
+print(state_counts_sorted)
 
-# Randomly initialize weights
-a = torch.randn((), device=device, dtype=dtype)
-b = torch.randn((), device=device, dtype=dtype)
-c = torch.randn((), device=device, dtype=dtype)
-d = torch.randn((), device=device, dtype=dtype)
+# Plotting the results
+state_counts_sorted.plot(kind='bar', color='skyblue')
+plt.xlabel('State')
+plt.ylabel('Number of Companies')
+plt.title('Concentration of Companies by State')
+plt.show()
 
-learning_rate = 1e-6
-for t in range(2000):
-    # Forward pass: compute predicted y
-    y_pred = a + b * x + c * x ** 2 + d * x ** 3
+#%% We will find the distribution of companies by top 10 biggest industry
+# Counting companies in each industry
+industry_counts = df['Industry'].value_counts()[:10]
 
-    # Compute and print loss
-    loss = (y_pred - y).pow(2).sum().item()
-    if t % 100 == 99:
-        print(t, loss)
+plt.figure(figsize=(12, 8))  # Increased figure size
+sns.barplot(x=industry_counts.index, y=industry_counts.values, palette='viridis')
+plt.title('Distribution of Companies by Industry')
+plt.ylabel('Number of Companies')
+plt.xlabel('Industry')
+plt.xticks(rotation=45)  # Rotate labels to avoid overlap
+plt.show()
 
-    # Backprop to compute gradients of a, b, c, d with respect to loss
-    grad_y_pred = 2.0 * (y_pred - y)
-    grad_a = grad_y_pred.sum()
-    grad_b = (grad_y_pred * x).sum()
-    grad_c = (grad_y_pred * x ** 2).sum()
-    grad_d = (grad_y_pred * x ** 3).sum()
+#%% Finding a correlation between Revenue, Revenue Growth, and Employees
+# Correlation matrix
+correlation_data = df[['Revenue (USD millions)', 'Revenue growth', 'Employees']].corr()
 
-    # Update weights using gradient descent
-    a -= learning_rate * grad_a
-    b -= learning_rate * grad_b
-    c -= learning_rate * grad_c
-    d -= learning_rate * grad_d
- 
+# Heatmap
+plt.figure(figsize=(8, 6))
+sns.heatmap(correlation_data, annot=True, cmap='coolwarm', fmt=".2f")
+plt.title('Correlation Matrix')
+plt.show()
 
-print(f'Result: y = {a.item()} + {b.item()} x + {c.item()} x^2 + {d.item()} x^3')
+## This is a bigger word (I guess)
+#%% 
