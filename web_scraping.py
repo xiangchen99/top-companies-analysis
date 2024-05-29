@@ -43,3 +43,26 @@ df["Revenue growth"] = df["Revenue growth"].str.replace("%", '').astype(float)/1
 df[['City', 'State']] = df['Headquarters'].str.extract(r'^(.*?),\s*(\w+|\w+\s\w+)$')
 df = df.drop(columns = ["Headquarters"])
 
+#%% Converting the dtypes
+# Dictionary specifying the conversion types for each column
+conversion_types = {
+    'Rank': 'string',
+    'Name': 'string',
+    'Industry': 'string',
+    'Revenue (USD millions)': float,
+    'Revenue growth': float,
+    'City': 'string',
+    'State': 'string'
+}
+
+# Converting data types
+df = df.astype(conversion_types)
+
+df['Employees'] = df['Employees'].str.replace(r'\D', '', regex=True)
+df['Employees'] = df['Employees'].astype('Int64')
+
+#%%
+print(df.dtypes)
+#%% searching for high population
+#high population is when the employees are above 1 million
+high_pop_df = df[df["Employees"] > 1000000]
